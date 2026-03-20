@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TICKER — AI Stock Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --border: #2a2a3a;
+    --accent: #00ff88;
+    --accent-dim: rgba(0,255,136,0.12);
+    --red: #ff4466;
+    --red-dim: rgba(255,68,102,0.12);
+    --yellow: #ffcc44;
+    --yellow-dim: rgba(255,204,68,0.1);
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --mono: 'DM Mono', monospace;
+    --display: 'Bebas Neue', cursive;
+    --body: 'DM Sans', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px 60px;
+    position: relative;
+    z-index: 1;
+  }
+
+  header {
+    padding: 48px 0 32px;
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 36px;
+  }
+
+  .logo {
+    font-family: var(--display);
+    font-size: 64px;
+    line-height: 1;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-shadow: 0 0 40px rgba(0,255,136,0.4);
+  }
+
+  .tagline {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* API Key Panel */
+  .apikey-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .apikey-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--yellow), transparent);
+  }
+
+  .apikey-panel.key-saved::before {
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+
+  .apikey-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .apikey-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--yellow);
+  }
+
+  .apikey-panel.key-saved .apikey-title { color: var(--accent); }
+
+  .key-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 2px;
+    border: 1px solid rgba(255,204,68,0.4);
+    color: var(--yellow);
+    background: var(--yellow-dim);
+  }
+
+  .apikey-panel.key-saved .key-badge {
+    border-color: rgba(0,255,136,0.3);
+    color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .apikey-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .apikey-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 13px 16px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    letter-spacing: 1px;
+    transition: border-color 0.2s;
+  }
+
+  .apikey-input:focus {
+    border-color: var(--accent);
+  }
+
+  .apikey-input::placeholder { color: #3a3a50; }
+
+  .btn-save {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 3px;
+    padding: 13px 22px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-save:hover { background: #00ffaa; }
+
+  .btn-clear {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 13px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-clear:hover { color: var(--red); border-color: rgba(255,68,102,0.4); }
+
+  .apikey-hint {
+    margin-top: 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .apikey-hint a { color: var(--accent); text-decoration: none; }
+
+  /* Ticker Input */
+  .input-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 28px 24px;
+    margin-bottom: 36px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .input-section::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+
+  .input-label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+
+  .input-row { display: flex; gap: 12px; }
+
+  .ticker-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 16px 20px;
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .ticker-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,255,136,0.08);
+  }
+
+  .ticker-input::placeholder {
+    color: var(--muted);
+    font-weight: 300;
+    letter-spacing: 1px;
+    text-transform: none;
+  }
+
+  .analyze-btn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 3px;
+    padding: 16px 32px;
+    font-family: var(--display);
+    font-size: 22px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    min-width: 160px;
+  }
+
+  .analyze-btn:hover:not(:disabled) {
+    background: #00ffaa;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(0,255,136,0.3);
+  }
+
+  .analyze-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .hint { margin-top: 10px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+  /* Loading */
+  .loading-bar { display: none; margin-bottom: 28px; }
+  .loading-bar.visible { display: block; }
+
+  .loading-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dot-pulse { display: inline-flex; gap: 4px; }
+  .dot-pulse span {
+    width: 4px; height: 4px; border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1.2s infinite;
+  }
+  .dot-pulse span:nth-child(2) { animation-delay: 0.2s; }
+  .dot-pulse span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes pulse {
+    0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1); }
+  }
+
+  .progress-track { height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #00ccff);
+    animation: sweep 2s ease-in-out infinite;
+  }
+
+  @keyframes sweep {
+    0%   { width: 0%; margin-left: 0; }
+    50%  { width: 60%; margin-left: 20%; }
+    100% { width: 0%; margin-left: 100%; }
+  }
+
+  /* Cards */
+  .results-grid { display: grid; gap: 20px; }
+
+  .stock-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    animation: card-in 0.4s ease both;
+  }
+
+  @keyframes card-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px 28px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .ticker-badge { font-family: var(--display); font-size: 32px; letter-spacing: 2px; line-height: 1; }
+  .ticker-buy  { color: var(--accent); }
+  .ticker-sell { color: var(--red); }
+  .ticker-hold { color: var(--yellow); }
+
+  .verdict-pill {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 2px;
+    margin-left: auto;
+  }
+
+  .verdict-buy  { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(0,255,136,0.3); }
+  .verdict-sell { background: var(--red-dim);    color: var(--red);    border: 1px solid rgba(255,68,102,0.3); }
+  .verdict-hold { background: var(--yellow-dim); color: var(--yellow); border: 1px solid rgba(255,204,68,0.3); }
+
+  .conf-block { display: flex; align-items: center; gap: 8px; }
+  .conf-label { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+  .conf-track { width: 80px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .conf-fill  { height: 100%; border-radius: 2px; }
+
+  .card-body { padding: 24px 28px; }
+  .summary-text { font-size: 14px; line-height: 1.7; color: #c0c0d0; margin-bottom: 20px; }
+
+  .news-section-label {
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 10px;
+  }
+
+  .news-items { display: grid; gap: 8px; }
+
+  .news-item {
+    display: flex; gap: 12px; align-items: flex-start;
+    font-size: 13px; color: var(--muted); line-height: 1.5;
+    padding: 10px 14px; background: var(--bg); border-radius: 3px;
+    border-left: 2px solid var(--border);
+  }
+  .news-item.positive { border-left-color: rgba(0,255,136,0.4); }
+  .news-item.negative { border-left-color: rgba(255,68,102,0.4); }
+
+  .news-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .news-dot.positive { background: var(--accent); }
+  .news-dot.negative { background: var(--red); }
+  .news-dot.neutral  { background: var(--muted); }
+
+  .card-footer {
+    padding: 14px 28px;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .timestamp  { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+  .risk-label { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+  /* Email bar */
+  .email-bar { display: none; margin-top: 28px; justify-content: flex-end; }
+  .email-bar.visible { display: flex; }
+
+  .email-btn {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid rgba(0,255,136,0.4);
+    border-radius: 3px;
+    padding: 12px 28px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .email-btn:hover {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    box-shadow: 0 0 16px rgba(0,255,136,0.15);
+  }
+
+  /* Error */
+  .error-card {
+    background: rgba(255,68,102,0.05);
+    border: 1px solid rgba(255,68,102,0.2);
+    border-radius: 4px;
+    padding: 20px 28px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--red);
+    letter-spacing: 1px;
+    line-height: 1.6;
+  }
+
+  /* Disclaimer */
+  .disclaimer {
+    margin-top: 48px;
+    padding: 20px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.6;
+    letter-spacing: 0.5px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="logo">TICKER</div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <div class="tagline">// AI-Powered Stock Intelligence</div>
+      <div class="tagline" style="color:#444456">v1.0 — Powered by Claude + Live Web Search</div>
+    </div>
+  </header>
+
+  <!-- API Key Panel -->
+  <div class="apikey-panel" id="apikeyPanel">
+    <div class="apikey-panel-header">
+      <span class="apikey-title">🔑 &nbsp;Anthropic API Key</span>
+      <span class="key-badge" id="keyBadge">NOT SET</span>
+    </div>
+    <div class="apikey-row">
+      <input
+        type="password"
+        class="apikey-input"
+        id="apiKeyInput"
+        placeholder="sk-ant-api03-..."
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button class="btn-save" onclick="saveApiKey()">SAVE</button>
+      <button class="btn-clear" onclick="clearApiKey()">CLEAR</button>
+    </div>
+    <div class="apikey-hint">
+      Stored in your browser only — never shared externally. &nbsp;|&nbsp;
+      Get your key at <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>
+    </div>
+  </div>
+
+  <!-- Ticker Input -->
+  <div class="input-section">
+    <label class="input-label">// Enter Stock Tickers</label>
+    <div class="input-row">
+      <input
+        class="ticker-input"
+        id="tickerInput"
+        type="text"
+        placeholder="AAPL, MSFT, TSLA, NVDA..."
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">ANALYZE</button>
+    </div>
+    <div class="hint">Comma-separated tickers — e.g., AAPL, GOOGL, AMZN</div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-bar" id="loadingBar">
+    <div class="loading-label">
+      <span class="dot-pulse"><span></span><span></span><span></span></span>
+      <span id="loadingText">Fetching live financial news...</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill"></div></div>
+  </div>
+
+  <!-- Results -->
+  <div class="results-grid" id="results"></div>
+
+  <!-- Email bar -->
+  <div class="email-bar" id="emailBar">
+    <button class="email-btn" onclick="sendEmail()">✉ &nbsp;Email Results to erukulla@yahoo.com</button>
+  </div>
+
+  <div class="disclaimer">
+    ⚠ DISCLAIMER — This tool is for informational and educational purposes only. Recommendations are generated by AI based on recent news and do not constitute financial advice. Always consult a qualified financial advisor before making investment decisions. Past performance is not indicative of future results.
+  </div>
+
+</div>
+<script>
+// ── API Key ──────────────────────────────────────────
+var _apiKey = '';
+
+function saveApiKey() {
+  var val = document.getElementById('apiKeyInput').value.trim();
+  if (!val) { alert('Please paste your API key first.'); return; }
+  _apiKey = val;
+  try { localStorage.setItem('ticker_api_key', val); } catch(e) {}
+  setKeyUI(true);
+}
+
+function clearApiKey() {
+  _apiKey = '';
+  document.getElementById('apiKeyInput').value = '';
+  try { localStorage.removeItem('ticker_api_key'); } catch(e) {}
+  setKeyUI(false);
+}
+
+function setKeyUI(hasKey) {
+  var badge = document.getElementById('keyBadge');
+  var panel = document.getElementById('apikeyPanel');
+  if (hasKey) {
+    badge.textContent = 'SET \u2713';
+    panel.classList.add('key-saved');
+  } else {
+    badge.textContent = 'NOT SET';
+    panel.classList.remove('key-saved');
+  }
+}
+
+// Restore on load
+(function() {
+  try {
+    var saved = localStorage.getItem('ticker_api_key');
+    if (saved) { _apiKey = saved; document.getElementById('apiKeyInput').value = saved; setKeyUI(true); }
+  } catch(e) {}
+})();
+
+// ── Loading ──────────────────────────────────────────
+var MSGS = [
+  'Fetching live financial news...',
+  'Scanning earnings reports & headlines...',
+  'Analyzing market sentiment...',
+  'Generating AI recommendations...',
+  'Compiling intelligence report...'
+];
+var _timer = null;
+
+function startLoading() {
+  document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('loadingBar').classList.add('visible');
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('emailBar').classList.remove('visible');
+  var i = 0;
+  document.getElementById('loadingText').textContent = MSGS[0];
+  _timer = setInterval(function() { i = (i+1) % MSGS.length; document.getElementById('loadingText').textContent = MSGS[i]; }, 2000);
+}
+
+function stopLoading() {
+  document.getElementById('analyzeBtn').disabled = false;
+  document.getElementById('loadingBar').classList.remove('visible');
+  clearInterval(_timer);
+}
+
+// ── Analyze ──────────────────────────────────────────
+async function analyze() {
+  var raw = document.getElementById('tickerInput').value.trim();
+  if (!raw) return;
+  var tickers = raw.split(',').map(function(t){ return t.trim().toUpperCase(); }).filter(Boolean);
+  if (!tickers.length) return;
+
+  if (!_apiKey) {
+    document.getElementById('results').innerHTML =
+      '<div class="error-card">&#9888; Please paste your Anthropic API key above and click SAVE before analyzing.</div>';
+    return;
+  }
+
+  startLoading();
+
+  var prompt = 'You are a financial analyst AI. For each of the following stock tickers, search the web for the LATEST news (last 7-14 days), earnings reports, analyst upgrades/downgrades, and relevant financial developments.\n\nTickers: ' + tickers.join(', ') + '\n\nFor EACH ticker, provide a structured analysis. Respond ONLY with a valid JSON array (no markdown, no backticks, no preamble), using this exact structure:\n\n[\n  {\n    "ticker": "AAPL",\n    "companyName": "Apple Inc.",\n    "verdict": "BUY",\n    "confidence": 75,\n    "summary": "2-3 sentence analysis summary based on recent news.",\n    "newsItems": [\n      { "text": "News headline", "sentiment": "positive" },\n      { "text": "Another item", "sentiment": "negative" },\n      { "text": "Third item", "sentiment": "neutral" }\n    ],\n    "riskLevel": "MEDIUM"\n  }\n]\n\nverdict: BUY, SELL, or HOLD. sentiment: positive, negative, or neutral. riskLevel: LOW, MEDIUM, or HIGH. Return ONLY the JSON array.';
+
+  try {
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': _apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    var data = await response.json();
+
+    if (data.error) {
+      if (data.error.type === 'authentication_error') throw new Error('Invalid API key. Please check your key and try again.');
+      throw new Error(data.error.message || 'API error');
+    }
+
+    var fullText = (data.content || []).filter(function(b){ return b.type === 'text'; }).map(function(b){ return b.text; }).join('');
+    var cleaned = fullText.replace(/```json|```/g, '').trim();
+    var match = cleaned.match(/\[[\s\S]*\]/);
+    if (!match) throw new Error('Could not parse response — please try again.');
+
+    var stocks = JSON.parse(match[0]);
+    window._lastResults = stocks;
+    stopLoading();
+    renderResults(stocks);
+    document.getElementById('emailBar').classList.add('visible');
+
+  } catch(err) {
+    stopLoading();
+    document.getElementById('results').innerHTML = '<div class="error-card">ERROR // ' + esc(err.message || 'Unknown error.') + '</div>';
+    console.error(err);
+  }
+}
+
+// ── Render ───────────────────────────────────────────
+function renderResults(stocks) {
+  var container = document.getElementById('results');
+  container.innerHTML = '';
+  stocks.forEach(function(stock, i) {
+    var verdict = (stock.verdict || 'HOLD').toUpperCase();
+    var vc = verdict === 'BUY' ? 'buy' : verdict === 'SELL' ? 'sell' : 'hold';
+    var conf = Math.min(100, Math.max(0, stock.confidence || 50));
+    var confColor = vc === 'buy' ? 'var(--accent)' : vc === 'sell' ? 'var(--red)' : 'var(--yellow)';
+
+    var newsHTML = (stock.newsItems || []).map(function(item) {
+      var s = item.sentiment || 'neutral';
+      return '<div class="news-item ' + s + '"><div class="news-dot ' + s + '"></div><span>' + esc(item.text) + '</span></div>';
+    }).join('');
+
+    var card = document.createElement('div');
+    card.className = 'stock-card';
+    card.style.animationDelay = (i * 0.1) + 's';
+    card.innerHTML =
+      '<div class="card-header">' +
+        '<div>' +
+          '<div class="ticker-badge ticker-' + vc + '">' + esc(stock.ticker) + '</div>' +
+          '<div style="font-size:12px;color:var(--muted);margin-top:4px;font-family:var(--mono)">' + esc(stock.companyName || '') + '</div>' +
+        '</div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px;margin-left:auto">' +
+          '<div class="verdict-pill verdict-' + vc + '">' + verdict + '</div>' +
+          '<div class="conf-block">' +
+            '<span class="conf-label">CONF ' + conf + '%</span>' +
+            '<div class="conf-track"><div class="conf-fill" style="width:' + conf + '%;background:' + confColor + '"></div></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="card-body">' +
+        '<p class="summary-text">' + esc(stock.summary || '') + '</p>' +
+        (newsHTML ? '<div class="news-section-label">// Key Developments</div><div class="news-items">' + newsHTML + '</div>' : '') +
+      '</div>' +
+      '<div class="card-footer">' +
+        '<span class="timestamp">' + new Date().toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}) + '</span>' +
+        '<span class="risk-label">RISK: ' + esc(stock.riskLevel || 'MEDIUM') + '</span>' +
+      '</div>';
+    container.appendChild(card);
+  });
+}
+
+// ── Email ────────────────────────────────────────────
+function sendEmail() {
+  var stocks = window._lastResults;
+  if (!stocks || !stocks.length) return;
+  var to   = 'erukulla@yahoo.com';
+  var date = new Date().toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  var subject = 'TICKER Analysis: ' + stocks.map(function(s){ return s.ticker; }).join(', ') + ' \u2014 ' + date;
+  var icon = function(s){ return s === 'positive' ? '\u25b2' : s === 'negative' ? '\u25bc' : '\u25cf'; };
+  var body = stocks.map(function(stock) {
+    var v = (stock.verdict || 'HOLD').toUpperCase();
+    var vLine = v === 'BUY' ? '\u2705 VERDICT: BUY' : v === 'SELL' ? '\ud83d\udd34 VERDICT: SELL' : '\ud83d\udfe1 VERDICT: HOLD';
+    var news = (stock.newsItems || []).map(function(n){ return '    ' + icon(n.sentiment) + ' ' + n.text; }).join('\n');
+    return ['\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501',
+      stock.ticker + ' \u2014 ' + (stock.companyName || ''),
+      '\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501',
+      vLine, '\ud83d\udcca CONFIDENCE: ' + (stock.confidence || 'N/A') + '%',
+      '\u26a0  RISK LEVEL: ' + (stock.riskLevel || 'MEDIUM'), '',
+      'SUMMARY:', stock.summary || '', '', 'KEY DEVELOPMENTS:', news, ''].join('\n');
+  }).join('\n');
+  var footer = ['\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501',
+    'Generated by TICKER AI \u2014 ' + date, '',
+    '\u26a0 DISCLAIMER: AI-generated analysis for informational purposes only.',
+    'Not financial advice. Consult a qualified financial advisor before investing.'].join('\n');
+  window.location.href = 'mailto:' + to + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent('TICKER \u2014 AI Stock Intelligence Report\nGenerated: ' + date + '\n\n' + body + footer);
+}
+
+// ── Helpers ──────────────────────────────────────────
+function esc(str) {
+  var d = document.createElement('div');
+  d.textContent = String(str || '');
+  return d.innerHTML;
+}
+
+document.getElementById('tickerInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') analyze();
+});
+</script>
+</body>
+</html>
